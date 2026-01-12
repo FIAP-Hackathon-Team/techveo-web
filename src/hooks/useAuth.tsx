@@ -33,9 +33,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    // TODO: Replace this URL with your actual backend endpoint
+    const API_URL = import.meta.env.VITE_AUTH_API_URL || "";
+    
+    // If no API URL is configured, use demo mode
+    if (!API_URL) {
+      const mockUser = { id: "1", email };
+      const mockToken = "demo_jwt_token";
+      
+      setToken(mockToken);
+      setUser(mockUser);
+      localStorage.setItem("auth_token", mockToken);
+      localStorage.setItem("auth_user", JSON.stringify(mockUser));
+      
+      return { success: true };
+    }
+
     try {
-      // TODO: Replace with your actual backend endpoint
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,17 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return { success: true };
     } catch (error) {
-      // For demo purposes, simulate successful login
-      // Remove this block when connecting to real backend
-      const mockUser = { id: "1", email };
-      const mockToken = "demo_jwt_token";
-      
-      setToken(mockToken);
-      setUser(mockUser);
-      localStorage.setItem("auth_token", mockToken);
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
-      
-      return { success: true };
+      return { 
+        success: false, 
+        error: "Erro de conexão com o servidor" 
+      };
     }
   };
 
