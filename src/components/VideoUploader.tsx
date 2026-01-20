@@ -55,6 +55,73 @@ export function VideoUploader() {
     }
   }, []);
 
+  const getVideoDuration = useCallback((file: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      let resolved = false;
+      
+      const cleanup = () => {
+        if (video.src) {
+          window.URL.revokeObjectURL(video.src);
+        }
+      };
+      
+      const resolveDuration = (duration: number) => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          resolve(duration);
+        }
+      };
+      
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        console.log('Video duration loaded:', duration, 'for file:', file.name);
+        if (isFinite(duration) && duration > 0) {
+          resolveDuration(duration);
+        } else {
+          // Tenta esperar um pouco mais
+          setTimeout(() => {
+            const retryDuration = video.duration;
+            if (isFinite(retryDuration) && retryDuration > 0) {
+              resolveDuration(retryDuration);
+            } else {
+              resolveDuration(0);
+            }
+          }, 100);
+        }
+      };
+      
+      video.ondurationchange = () => {
+        const duration = video.duration;
+        console.log('Duration changed:', duration);
+        if (isFinite(duration) && duration > 0) {
+          resolveDuration(duration);
+        }
+      };
+      
+      video.onerror = (e) => {
+        console.error('Video load error for', file.name, e);
+        resolveDuration(0);
+      };
+      
+      // Timeout de segurança de 10 segundos
+      setTimeout(() => {
+        console.warn('Timeout loading video duration for', file.name);
+        resolveDuration(0);
+      }, 10000);
+      
+      try {
+        video.src = URL.createObjectURL(file);
+        video.load();
+      } catch (error) {
+        console.error('Error creating video URL:', error);
+        resolveDuration(0);
+      }
+    });
+  }, []);
+
   const processFiles = useCallback((files: FileList) => {
     const videoFiles = Array.from(files).filter((file) =>
       file.type.startsWith("video/")
@@ -75,13 +142,14 @@ export function VideoUploader() {
     setVideos((prev) => [...prev, ...newVideos]);
 
     // Get video duration for each video
-    newVideos.forEach(async (video) => {
-      const duration = await getVideoDuration(video.file);
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === video.id ? { ...v, duration } : v
-        )
-      );
+    newVideos.forEach((video) => {
+      getVideoDuration(video.file).then((duration) => {
+        setVideos((prev) =>
+          prev.map((v) =>
+            v.id === video.id ? { ...v, duration } : v
+          )
+        );
+      });
     });
 
     // Simulate upload progress
@@ -106,7 +174,7 @@ export function VideoUploader() {
         }
       }, 200);
     });
-  }, []);
+  }, [getVideoDuration]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -136,21 +204,6 @@ export function VideoUploader() {
         v.id === id ? { ...v, options: { ...v.options, ...options } } : v
       )
     );
-  }, []);
-
-  const getVideoDuration = useCallback((file: File): Promise<number> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        window.URL.revokeObjectURL(video.src);
-        resolve(video.duration);
-      };
-      video.onerror = () => {
-        resolve(0);
-      };
-      video.src = URL.createObjectURL(file);
-    });
   }, []);
 
   const removeVideo = useCallback((id: string) => {
