@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, FileVideo, X, Download, Loader2, CheckCircle, Settings } from "lucide-react";
+import { Upload, FileVideo, X, Send, Loader2, CheckCircle, Settings, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import JSZip from "jszip";
@@ -32,7 +32,7 @@ interface UploadedVideo {
   file: File;
   id: string;
   progress: number;
-  status: "uploading" | "ready" | "error";
+  status: "uploading" | "ready" | "error" | "processing" | "processed";
   options: VideoSnapshotOptions;
   duration?: number;
   durationLoaded: boolean;
@@ -42,7 +42,7 @@ export function VideoUploader() {
   const { token } = useAuth();
   const [videos, setVideos] = useState<UploadedVideo[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -212,37 +212,72 @@ export function VideoUploader() {
     setVideos((prev) => prev.filter((v) => v.id !== id));
   }, []);
 
-  const downloadZip = useCallback(async () => {
+  const validateVideoConfig = useCallback((video: UploadedVideo): boolean => {
+    return !!(video.options.snapshotCount || video.options.intervalSeconds);
+  }, []);
+
+  const processVideos = useCallback(async () => {
     const readyVideos = videos.filter((v) => v.status === "ready");
     if (readyVideos.length === 0) return;
 
-    setIsDownloading(true);
+    // Validar se todos os vídeos têm configuração
+    const invalidVideos = readyVideos.filter(v => !validateVideoConfig(v));
+    if (invalidVideos.length > 0) {
+      alert(`Por favor, configure todos os vídeos antes de processar. ${invalidVideos.length} vídeo(s) sem configuração.`);
+      return;
+    }
+
+    setIsProcessing(true);
     
     try {
-      const zip = new JSZip();
-      
       for (const video of readyVideos) {
-        const arrayBuffer = await video.file.arrayBuffer();
-        zip.file(video.file.name, arrayBuffer);
+        // Marcar como processando
+        setVideos((prev) =>
+          prev.map((v) =>
+            v.id === video.id ? { ...v, status: "processing" } : v
+          )
+        );
+
+        // Preparar FormData
+        const formData = new FormData();
+        formData.append('file', video.file);
+        formData.append('snapshotCount', video.options.snapshotCount?.toString() || '');
+        formData.append('intervalSeconds', video.options.intervalSeconds?.toString() || '');
+        formData.append('width', video.options.width.toString());
+        formData.append('height', video.options.height.toString());
+
+        // Enviar para o servidor
+        const response = await fetch('/api/process-video', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          setVideos((prev) =>
+            prev.map((v) =>
+              v.id === video.id ? { ...v, status: "processed" } : v
+            )
+          );
+        } else {
+          setVideos((prev) =>
+            prev.map((v) =>
+              v.id === video.id ? { ...v, status: "error" } : v
+            )
+          );
+        }
       }
-      
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `videos_${new Date().toISOString().split("T")[0]}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error creating zip:", error);
+      console.error("Error processing videos:", error);
     } finally {
-      setIsDownloading(false);
+      setIsProcessing(false);
     }
-  }, [videos]);
+  }, [videos, token, validateVideoConfig]);
 
   const readyCount = videos.filter((v) => v.status === "ready").length;
+  const configuredCount = videos.filter((v) => v.status === "ready" && (v.options.snapshotCount || v.options.intervalSeconds)).length;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024 * 1024) {
@@ -296,21 +331,29 @@ export function VideoUploader() {
       {videos.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium">
-              Vídeos ({readyCount}/{videos.length})
-            </h3>
+            <div>
+              <h3 className="font-medium">
+                Vídeos ({readyCount}/{videos.length})
+              </h3>
+              {readyCount > 0 && configuredCount < readyCount && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {configuredCount}/{readyCount} vídeos configurados
+                </p>
+              )}
+            </div>
             {readyCount > 0 && (
               <Button
-                onClick={downloadZip}
-                disabled={isDownloading}
+                onClick={processVideos}
+                disabled={isProcessing || configuredCount === 0}
                 className="gap-2"
               >
-                {isDownloading ? (
+                {isProcessing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Download className="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                 )}
-                Baixar ZIP
+                Processar Vídeos
               </Button>
             )}
           </div>
@@ -349,6 +392,27 @@ export function VideoUploader() {
                   
                   {video.status === "ready" && (
                     <CheckCircle className="w-5 h-5 text-success" />
+                  )}
+                  
+                  {video.status === "processing" && (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      <span className="text-xs text-muted-foreground">Processando...</span>
+                    </div>
+                  )}
+                  
+                  {video.status === "processed" && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="text-xs text-green-600 dark:text-green-500">Processado</span>
+                    </div>
+                  )}
+                  
+                  {video.status === "error" && (
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                      <span className="text-xs text-red-600 dark:text-red-500">Erro</span>
+                    </div>
                   )}
 
                   <Dialog open={configDialogOpen === video.id} onOpenChange={(open) => setConfigDialogOpen(open ? video.id : null)}>
