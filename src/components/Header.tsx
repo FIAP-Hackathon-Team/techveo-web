@@ -13,7 +13,7 @@ export function Header() {
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
             <Video className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">VideoZip</span>
+          <span className="font-semibold text-lg tracking-tight">TechVeo</span>
         </div>
 
         <div className="flex items-center gap-2">
