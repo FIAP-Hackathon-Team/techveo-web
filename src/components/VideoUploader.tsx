@@ -35,6 +35,7 @@ interface UploadedVideo {
   status: "uploading" | "ready" | "error";
   options: VideoSnapshotOptions;
   duration?: number;
+  durationLoaded: boolean;
 }
 
 export function VideoUploader() {
@@ -102,15 +103,15 @@ export function VideoUploader() {
       };
       
       video.onerror = (e) => {
-        console.error('Video load error for', file.name, e);
+        console.error('Video load error for', file.name, '- Formato pode não ser suportado pelo navegador');
         resolveDuration(0);
       };
       
-      // Timeout de segurança de 10 segundos
+      // Timeout de segurança de 3 segundos
       setTimeout(() => {
-        console.warn('Timeout loading video duration for', file.name);
+        console.warn('Timeout loading video duration for', file.name, '- Formato não suportado ou arquivo corrompido');
         resolveDuration(0);
-      }, 10000);
+      }, 3000);
       
       try {
         video.src = URL.createObjectURL(file);
@@ -137,6 +138,7 @@ export function VideoUploader() {
         height: 1080,
       },
       duration: undefined,
+      durationLoaded: false,
     }));
 
     setVideos((prev) => [...prev, ...newVideos]);
@@ -146,7 +148,7 @@ export function VideoUploader() {
       getVideoDuration(video.file).then((duration) => {
         setVideos((prev) =>
           prev.map((v) =>
-            v.id === video.id ? { ...v, duration } : v
+            v.id === video.id ? { ...v, duration, durationLoaded: true } : v
           )
         );
       });
@@ -370,7 +372,7 @@ export function VideoUploader() {
                       </DialogHeader>
                       
                       <div className="grid gap-6 py-4">
-                        {video.duration !== undefined && (
+                        {video.durationLoaded && video.duration && video.duration > 0 ? (
                           <div className="p-3 bg-secondary/50 rounded-lg">
                             <p className="text-sm">
                               <span className="font-medium">Duração do vídeo:</span>{" "}
@@ -380,7 +382,15 @@ export function VideoUploader() {
                               </span>
                             </p>
                           </div>
-                        )}
+                        ) : video.durationLoaded ? (
+                          <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                            <p className="text-sm text-yellow-600 dark:text-yellow-500">
+                              <span className="font-medium">⚠️ Formato não suportado pelo navegador</span>
+                              <br />
+                              <span className="text-xs">Configure manualmente os valores. Recomendamos converter para MP4.</span>
+                            </p>
+                          </div>
+                        ) : null}
 
                         <div className="grid gap-3">
                           <Label htmlFor={`snapshot-count-${video.id}`}>
@@ -390,14 +400,14 @@ export function VideoUploader() {
                             id={`snapshot-count-${video.id}`}
                             type="number"
                             min="1"
-                            max={video.duration ? Math.floor(video.duration) : undefined}
+                            max={video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000}
                             placeholder="Ex: 10 (distribuídos uniformemente)"
                             value={video.options.snapshotCount || ""}
                             disabled={!!video.options.intervalSeconds}
                             onChange={(e) => {
                               const value = e.target.value ? parseInt(e.target.value) : undefined;
                               if (value) {
-                                const maxCount = video.duration ? Math.floor(video.duration) : 1000;
+                                const maxCount = video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000;
                                 const limitedValue = Math.min(Math.max(value, 1), maxCount);
                                 updateVideoOptions(video.id, { snapshotCount: limitedValue, intervalSeconds: undefined });
                               } else {
@@ -406,7 +416,8 @@ export function VideoUploader() {
                             }}
                           />
                           <p className="text-xs text-muted-foreground">
-                            {video.options.intervalSeconds ? "Desabilitado enquanto usa intervalo" : `Máximo: ${video.duration ? Math.floor(video.duration) : '—'} snapshots`}
+                            {video.options.intervalSeconds ? "Desabilitado enquanto usa intervalo" : 
+                              video.duration && video.duration > 0 ? `Máximo: ${Math.floor(video.duration)} snapshots` : 'Máximo: 10000 snapshots'}
                           </p>
                         </div>
 
@@ -418,7 +429,7 @@ export function VideoUploader() {
                             id={`interval-${video.id}`}
                             type="number"
                             min="0.1"
-                            max={video.duration ? video.duration : undefined}
+                            max={video.duration && video.duration > 0 ? video.duration : 86400}
                             step="0.1"
                             placeholder="Ex: 2.5"
                             value={video.options.intervalSeconds || ""}
@@ -426,7 +437,7 @@ export function VideoUploader() {
                             onChange={(e) => {
                               const value = e.target.value ? parseFloat(e.target.value) : undefined;
                               if (value) {
-                                const maxInterval = video.duration || 3600;
+                                const maxInterval = video.duration && video.duration > 0 ? video.duration : 86400;
                                 const limitedValue = Math.min(Math.max(value, 0.1), maxInterval);
                                 updateVideoOptions(video.id, { intervalSeconds: limitedValue, snapshotCount: undefined });
                               } else {
@@ -435,7 +446,8 @@ export function VideoUploader() {
                             }}
                           />
                           <p className="text-xs text-muted-foreground">
-                            {video.options.snapshotCount ? "Desabilitado enquanto usa contagem" : `Máximo: ${video.duration ? video.duration.toFixed(1) : '—'}s`}
+                            {video.options.snapshotCount ? "Desabilitado enquanto usa contagem" : 
+                              video.duration && video.duration > 0 ? `Máximo: ${video.duration.toFixed(1)}s` : 'Máximo: 24h (86400s)'}
                           </p>
                         </div>
 
