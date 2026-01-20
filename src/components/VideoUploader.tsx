@@ -1,14 +1,39 @@
 import { useState, useCallback, useRef } from "react";
-import { Upload, FileVideo, X, Download, Loader2, CheckCircle } from "lucide-react";
+import { Upload, FileVideo, X, Download, Loader2, CheckCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import JSZip from "jszip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface VideoSnapshotOptions {
+  snapshotCount?: number;
+  intervalSeconds?: number;
+  width: number;
+  height: number;
+}
 
 interface UploadedVideo {
   file: File;
   id: string;
   progress: number;
   status: "uploading" | "ready" | "error";
+  options: VideoSnapshotOptions;
 }
 
 export function VideoUploader() {
@@ -16,6 +41,7 @@ export function VideoUploader() {
   const [videos, setVideos] = useState<UploadedVideo[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -38,6 +64,10 @@ export function VideoUploader() {
       id: crypto.randomUUID(),
       progress: 0,
       status: "uploading" as const,
+      options: {
+        width: 1920,
+        height: 1080,
+      },
     }));
 
     setVideos((prev) => [...prev, ...newVideos]);
@@ -87,6 +117,14 @@ export function VideoUploader() {
     },
     [processFiles]
   );
+
+  const updateVideoOptions = useCallback((id: string, options: Partial<VideoSnapshotOptions>) => {
+    setVideos((prev) =>
+      prev.map((v) =>
+        v.id === id ? { ...v, options: { ...v.options, ...options } } : v
+      )
+    );
+  }, []);
 
   const removeVideo = useCallback((id: string) => {
     setVideos((prev) => prev.filter((v) => v.id !== id));
@@ -230,6 +268,133 @@ export function VideoUploader() {
                   {video.status === "ready" && (
                     <CheckCircle className="w-5 h-5 text-success" />
                   )}
+
+                  <Dialog open={configDialogOpen === video.id} onOpenChange={(open) => setConfigDialogOpen(open ? video.id : null)}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-8 w-8 rounded-full hover:bg-primary/10"
+                        title="Configurações"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Configurações do Vídeo</DialogTitle>
+                        <DialogDescription>
+                          Configure as opções de extração de snapshots para {video.file.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="grid gap-6 py-4">
+                        <div className="grid gap-3">
+                          <Label htmlFor={`snapshot-count-${video.id}`}>
+                            Número de Snapshots
+                          </Label>
+                          <Input
+                            id={`snapshot-count-${video.id}`}
+                            type="number"
+                            min="1"
+                            placeholder="Ex: 10 (distribuídos uniformemente)"
+                            value={video.options.snapshotCount || ""}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseInt(e.target.value) : undefined;
+                              updateVideoOptions(video.id, { snapshotCount: value });
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Deixe vazio para usar o intervalo em segundos
+                          </p>
+                        </div>
+
+                        <div className="grid gap-3">
+                          <Label htmlFor={`interval-${video.id}`}>
+                            Intervalo entre Snapshots (segundos)
+                          </Label>
+                          <Input
+                            id={`interval-${video.id}`}
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            placeholder="Ex: 2.5"
+                            value={video.options.intervalSeconds || ""}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                              updateVideoOptions(video.id, { intervalSeconds: value });
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Deixe vazio para usar o número de snapshots
+                          </p>
+                        </div>
+
+                        <div className="grid gap-3">
+                          <Label>Tamanho dos Snapshots</Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label htmlFor={`width-${video.id}`} className="text-xs text-muted-foreground">
+                                Largura (px)
+                              </Label>
+                              <Input
+                                id={`width-${video.id}`}
+                                type="number"
+                                min="1"
+                                value={video.options.width}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 1920;
+                                  updateVideoOptions(video.id, { width: value });
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`height-${video.id}`} className="text-xs text-muted-foreground">
+                                Altura (px)
+                              </Label>
+                              <Input
+                                id={`height-${video.id}`}
+                                type="number"
+                                min="1"
+                                value={video.options.height}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 1080;
+                                  updateVideoOptions(video.id, { height: value });
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <Select
+                            value={`${video.options.width}x${video.options.height}`}
+                            onValueChange={(value) => {
+                              const [width, height] = value.split('x').map(Number);
+                              updateVideoOptions(video.id, { width, height });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1920x1080">Full HD (1920x1080)</SelectItem>
+                              <SelectItem value="1280x720">HD (1280x720)</SelectItem>
+                              <SelectItem value="3840x2160">4K (3840x2160)</SelectItem>
+                              <SelectItem value="640x480">SD (640x480)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setConfigDialogOpen(null)}
+                        >
+                          Fechar
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
                   <Button
                     variant="ghost"
