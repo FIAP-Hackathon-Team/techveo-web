@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -26,6 +27,7 @@ interface VideoSnapshotOptions {
   intervalSeconds?: number;
   width: number;
   height: number;
+  prompt?: string;
 }
 
 interface UploadedVideo {
@@ -136,6 +138,7 @@ export function VideoUploader() {
       options: {
         width: 1920,
         height: 1080,
+        prompt: undefined,
       },
       duration: undefined,
       durationLoaded: false,
@@ -213,7 +216,8 @@ export function VideoUploader() {
   }, []);
 
   const validateVideoConfig = useCallback((video: UploadedVideo): boolean => {
-    return !!(video.options.snapshotCount || video.options.intervalSeconds);
+    const hasPrompt = !!(video.options.prompt && video.options.prompt.trim().length > 0);
+    return !!(video.options.snapshotCount || video.options.intervalSeconds || hasPrompt);
   }, []);
 
   const processVideos = useCallback(async () => {
@@ -245,6 +249,7 @@ export function VideoUploader() {
         formData.append('intervalSeconds', video.options.intervalSeconds?.toString() || '');
         formData.append('width', video.options.width.toString());
         formData.append('height', video.options.height.toString());
+        formData.append('prompt', video.options.prompt || '');
 
         // Enviar para o servidor
         const response = await fetch('/api/process-video', {
@@ -277,7 +282,7 @@ export function VideoUploader() {
   }, [videos, token, validateVideoConfig]);
 
   const readyCount = videos.filter((v) => v.status === "ready").length;
-  const configuredCount = videos.filter((v) => v.status === "ready" && (v.options.snapshotCount || v.options.intervalSeconds)).length;
+  const configuredCount = videos.filter((v) => v.status === "ready" && (v.options.snapshotCount || v.options.intervalSeconds || (v.options.prompt && v.options.prompt.trim().length > 0))).length;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024 * 1024) {
@@ -467,20 +472,20 @@ export function VideoUploader() {
                             max={video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000}
                             placeholder="Ex: 10 (distribuídos uniformemente)"
                             value={video.options.snapshotCount || ""}
-                            disabled={!!video.options.intervalSeconds}
+                            disabled={!!video.options.intervalSeconds || !!video.options.prompt}
                             onChange={(e) => {
                               const value = e.target.value ? parseInt(e.target.value) : undefined;
                               if (value) {
                                 const maxCount = video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000;
                                 const limitedValue = Math.min(Math.max(value, 1), maxCount);
-                                updateVideoOptions(video.id, { snapshotCount: limitedValue, intervalSeconds: undefined });
+                                updateVideoOptions(video.id, { snapshotCount: limitedValue, intervalSeconds: undefined, prompt: undefined });
                               } else {
                                 updateVideoOptions(video.id, { snapshotCount: undefined });
                               }
                             }}
                           />
                           <p className="text-xs text-muted-foreground">
-                            {video.options.intervalSeconds ? "Desabilitado enquanto usa intervalo" : 
+                            {video.options.intervalSeconds || video.options.prompt ? "Desabilitado enquanto usa intervalo ou prompt" : 
                               video.duration && video.duration > 0 ? `Máximo: ${Math.floor(video.duration)} snapshots` : 'Máximo: 10000 snapshots'}
                           </p>
                         </div>
@@ -497,22 +502,45 @@ export function VideoUploader() {
                             step="0.1"
                             placeholder="Ex: 2.5"
                             value={video.options.intervalSeconds || ""}
-                            disabled={!!video.options.snapshotCount}
+                            disabled={!!video.options.snapshotCount || !!video.options.prompt}
                             onChange={(e) => {
                               const value = e.target.value ? parseFloat(e.target.value) : undefined;
                               if (value) {
                                 const maxInterval = video.duration && video.duration > 0 ? video.duration : 86400;
                                 const limitedValue = Math.min(Math.max(value, 0.1), maxInterval);
-                                updateVideoOptions(video.id, { intervalSeconds: limitedValue, snapshotCount: undefined });
+                                updateVideoOptions(video.id, { intervalSeconds: limitedValue, snapshotCount: undefined, prompt: undefined });
                               } else {
                                 updateVideoOptions(video.id, { intervalSeconds: undefined });
                               }
                             }}
                           />
                           <p className="text-xs text-muted-foreground">
-                            {video.options.snapshotCount ? "Desabilitado enquanto usa contagem" : 
+                            {video.options.snapshotCount || video.options.prompt ? "Desabilitado enquanto usa contagem ou prompt" : 
                               video.duration && video.duration > 0 ? `Máximo: ${video.duration.toFixed(1)}s` : 'Máximo: 24h (86400s)'}
                           </p>
+                        </div>
+
+                        <div className="grid gap-3">
+                          <Label htmlFor={`prompt-${video.id}`}>Prompt de Extração</Label>
+                          <Textarea
+                            id={`prompt-${video.id}`}
+                            placeholder="Descreva o que deseja extrair (ex: Extrair os melhores momentos do vídeo)"
+                            value={video.options.prompt || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value && value.trim().length > 0) {
+                                updateVideoOptions(video.id, { prompt: value, snapshotCount: undefined, intervalSeconds: undefined });
+                              } else {
+                                updateVideoOptions(video.id, { prompt: undefined });
+                              }
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground">Sugestões:</p>
+                          <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os melhores momentos do vídeo', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Extrair os melhores momentos</Button>
+                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os momentos mais marcantes e emocionantes', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Momentos mais marcantes</Button>
+                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair cenas ideais para thumbnail', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Cenas para thumbnail</Button>
+                          </div>
                         </div>
 
                         <div className="grid gap-3">
