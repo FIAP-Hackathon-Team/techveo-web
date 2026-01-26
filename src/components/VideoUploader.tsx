@@ -28,6 +28,7 @@ interface VideoSnapshotOptions {
   width: number;
   height: number;
   prompt?: string;
+  mode?: "snapshot" | "interval" | "prompt";
 }
 
 interface UploadedVideo {
@@ -139,6 +140,7 @@ export function VideoUploader() {
         width: 1920,
         height: 1080,
         prompt: undefined,
+        mode: undefined,
       },
       duration: undefined,
       durationLoaded: false,
@@ -216,8 +218,17 @@ export function VideoUploader() {
   }, []);
 
   const validateVideoConfig = useCallback((video: UploadedVideo): boolean => {
-    const hasPrompt = !!(video.options.prompt && video.options.prompt.trim().length > 0);
-    return !!(video.options.snapshotCount || video.options.intervalSeconds || hasPrompt);
+    const mode = video.options.mode;
+    if (mode === "snapshot") {
+      return !!video.options.snapshotCount;
+    }
+    if (mode === "interval") {
+      return !!video.options.intervalSeconds;
+    }
+    if (mode === "prompt") {
+      return !!(video.options.prompt && video.options.prompt.trim().length > 0);
+    }
+    return false;
   }, []);
 
   const processVideos = useCallback(async () => {
@@ -282,7 +293,7 @@ export function VideoUploader() {
   }, [videos, token, validateVideoConfig]);
 
   const readyCount = videos.filter((v) => v.status === "ready").length;
-  const configuredCount = videos.filter((v) => v.status === "ready" && (v.options.snapshotCount || v.options.intervalSeconds || (v.options.prompt && v.options.prompt.trim().length > 0))).length;
+  const configuredCount = videos.filter((v) => v.status === "ready" && validateVideoConfig(v)).length;
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024 * 1024) {
@@ -462,85 +473,107 @@ export function VideoUploader() {
                         ) : null}
 
                         <div className="grid gap-3">
-                          <Label htmlFor={`snapshot-count-${video.id}`}>
-                            Número de Snapshots
-                          </Label>
-                          <Input
-                            id={`snapshot-count-${video.id}`}
-                            type="number"
-                            min="1"
-                            max={video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000}
-                            placeholder="Ex: 10 (distribuídos uniformemente)"
-                            value={video.options.snapshotCount || ""}
-                            disabled={!!video.options.intervalSeconds || !!video.options.prompt}
-                            onChange={(e) => {
-                              const value = e.target.value ? parseInt(e.target.value) : undefined;
-                              if (value) {
-                                const maxCount = video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000;
-                                const limitedValue = Math.min(Math.max(value, 1), maxCount);
-                                updateVideoOptions(video.id, { snapshotCount: limitedValue, intervalSeconds: undefined, prompt: undefined });
-                              } else {
-                                updateVideoOptions(video.id, { snapshotCount: undefined });
-                              }
+                          <Label>Modo de Extração</Label>
+                          <Select
+                            value={video.options.mode || ""}
+                            onValueChange={(value) => {
+                              const mode = value as "snapshot" | "interval" | "prompt";
+                              updateVideoOptions(video.id, { mode, snapshotCount: undefined, intervalSeconds: undefined, prompt: undefined });
                             }}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {video.options.intervalSeconds || video.options.prompt ? "Desabilitado enquanto usa intervalo ou prompt" : 
-                              video.duration && video.duration > 0 ? `Máximo: ${Math.floor(video.duration)} snapshots` : 'Máximo: 10000 snapshots'}
-                          </p>
-                        </div>
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Escolha o modo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="snapshot">Número de snapshots</SelectItem>
+                              <SelectItem value="interval">Intervalo entre snapshots</SelectItem>
+                              <SelectItem value="prompt">Prompt de extração</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                        <div className="grid gap-3">
-                          <Label htmlFor={`interval-${video.id}`}>
-                            Intervalo entre Snapshots (segundos)
-                          </Label>
-                          <Input
-                            id={`interval-${video.id}`}
-                            type="number"
-                            min="0.1"
-                            max={video.duration && video.duration > 0 ? video.duration : 86400}
-                            step="0.1"
-                            placeholder="Ex: 2.5"
-                            value={video.options.intervalSeconds || ""}
-                            disabled={!!video.options.snapshotCount || !!video.options.prompt}
-                            onChange={(e) => {
-                              const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                              if (value) {
-                                const maxInterval = video.duration && video.duration > 0 ? video.duration : 86400;
-                                const limitedValue = Math.min(Math.max(value, 0.1), maxInterval);
-                                updateVideoOptions(video.id, { intervalSeconds: limitedValue, snapshotCount: undefined, prompt: undefined });
-                              } else {
-                                updateVideoOptions(video.id, { intervalSeconds: undefined });
-                              }
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {video.options.snapshotCount || video.options.prompt ? "Desabilitado enquanto usa contagem ou prompt" : 
-                              video.duration && video.duration > 0 ? `Máximo: ${video.duration.toFixed(1)}s` : 'Máximo: 24h (86400s)'}
-                          </p>
-                        </div>
+                          {!video.options.mode && (
+                            <p className="text-xs text-muted-foreground">Selecione um modo para ver os inputs correspondentes.</p>
+                          )}
 
-                        <div className="grid gap-3">
-                          <Label htmlFor={`prompt-${video.id}`}>Prompt de Extração</Label>
-                          <Textarea
-                            id={`prompt-${video.id}`}
-                            placeholder="Descreva o que deseja extrair (ex: Extrair os melhores momentos do vídeo)"
-                            value={video.options.prompt || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value && value.trim().length > 0) {
-                                updateVideoOptions(video.id, { prompt: value, snapshotCount: undefined, intervalSeconds: undefined });
-                              } else {
-                                updateVideoOptions(video.id, { prompt: undefined });
-                              }
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">Sugestões:</p>
-                          <div className="flex gap-2 flex-wrap">
-                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os melhores momentos do vídeo', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Extrair os melhores momentos</Button>
-                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os momentos mais marcantes e emocionantes', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Momentos mais marcantes</Button>
-                            <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair cenas ideais para thumbnail', snapshotCount: undefined, intervalSeconds: undefined })} className="text-xs">Cenas para thumbnail</Button>
-                          </div>
+                          {video.options.mode === 'snapshot' && (
+                            <div className="grid gap-3">
+                              <Label htmlFor={`snapshot-count-${video.id}`}>Número de Snapshots</Label>
+                              <Input
+                                id={`snapshot-count-${video.id}`}
+                                type="number"
+                                min="1"
+                                max={video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000}
+                                placeholder="Ex: 10 (distribuídos uniformemente)"
+                                value={video.options.snapshotCount || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value ? parseInt(e.target.value) : undefined;
+                                  if (value) {
+                                    const maxCount = video.duration && video.duration > 0 ? Math.floor(video.duration) : 10000;
+                                    const limitedValue = Math.min(Math.max(value, 1), maxCount);
+                                    updateVideoOptions(video.id, { snapshotCount: limitedValue });
+                                  } else {
+                                    updateVideoOptions(video.id, { snapshotCount: undefined });
+                                  }
+                                }}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                {video.duration && video.duration > 0 ? `Máximo: ${Math.floor(video.duration)} snapshots` : 'Máximo: 10000 snapshots'}
+                              </p>
+                            </div>
+                          )}
+
+                          {video.options.mode === 'interval' && (
+                            <div className="grid gap-3">
+                              <Label htmlFor={`interval-${video.id}`}>Intervalo entre Snapshots (segundos)</Label>
+                              <Input
+                                id={`interval-${video.id}`}
+                                type="number"
+                                min="0.1"
+                                max={video.duration && video.duration > 0 ? video.duration : 86400}
+                                step="0.1"
+                                placeholder="Ex: 2.5"
+                                value={video.options.intervalSeconds || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                                  if (value) {
+                                    const maxInterval = video.duration && video.duration > 0 ? video.duration : 86400;
+                                    const limitedValue = Math.min(Math.max(value, 0.1), maxInterval);
+                                    updateVideoOptions(video.id, { intervalSeconds: limitedValue });
+                                  } else {
+                                    updateVideoOptions(video.id, { intervalSeconds: undefined });
+                                  }
+                                }}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                {video.duration && video.duration > 0 ? `Máximo: ${video.duration.toFixed(1)}s` : 'Máximo: 24h (86400s)'}
+                              </p>
+                            </div>
+                          )}
+
+                          {video.options.mode === 'prompt' && (
+                            <div className="grid gap-3">
+                              <Label htmlFor={`prompt-${video.id}`}>Prompt de Extração</Label>
+                              <Textarea
+                                id={`prompt-${video.id}`}
+                                placeholder="Descreva o que deseja extrair (ex: Extrair os melhores momentos do vídeo)"
+                                value={video.options.prompt || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value && value.trim().length > 0) {
+                                    updateVideoOptions(video.id, { prompt: value });
+                                  } else {
+                                    updateVideoOptions(video.id, { prompt: undefined });
+                                  }
+                                }}
+                              />
+                              <p className="text-xs text-muted-foreground">Sugestões:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os melhores momentos do vídeo', mode: 'prompt' })} className="text-xs">Extrair os melhores momentos</Button>
+                                <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair os momentos mais marcantes e emocionantes', mode: 'prompt' })} className="text-xs">Momentos mais marcantes</Button>
+                                <Button variant="outline" size="sm" onClick={() => updateVideoOptions(video.id, { prompt: 'Extrair cenas ideais para thumbnail', mode: 'prompt' })} className="text-xs">Cenas para thumbnail</Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="grid gap-3">
