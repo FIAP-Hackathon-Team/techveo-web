@@ -31,6 +31,11 @@ export default function Login() {
     setIsLoading(false);
   };
 
+  const handleSocialLogin = (provider: "google" | "facebook") => {
+    const base = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${base}/auth/${provider}`;
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="absolute top-4 right-4">
@@ -111,9 +116,52 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Configure seu endpoint de autenticação no backend
-          </p>
+          {/* Social login buttons */}
+          <div className="pt-2">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => handleSocialLogin("google")}
+                className="flex-1 h-11"
+                variant="outline"
+              >
+                <span className="mr-2 flex items-center">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2045c0-.638-.0573-1.251-.164-1.836H9v3.478h4.844c-.209 1.126-.84 2.083-1.785 2.727v2.266h2.888c1.691-1.558 2.693-3.854 2.693-6.635z" fill="#4285F4"/>
+                    <path d="M9 18c2.43 0 4.468-.806 5.958-2.188l-2.888-2.266c-.802.538-1.83.857-3.07.857-2.36 0-4.36-1.593-5.08-3.734H.995v2.344C2.48 15.83 5.522 18 9 18z" fill="#34A853"/>
+                    <path d="M3.92 10.669c-.18-.538-.283-1.114-.283-1.699s.103-1.161.283-1.699V4.927H.995A8.997 8.997 0 000 9c0 1.45.345 2.824.995 4.073l2.925-2.404z" fill="#FBBC05"/>
+                    <path d="M9 3.579c1.322 0 2.51.455 3.446 1.349l2.586-2.586C13.463.954 11.425 0 9 0 5.522 0 2.48 2.17.995 4.927l2.925 2.344C4.64 5.172 6.64 3.579 9 3.579z" fill="#EA4335"/>
+                  </svg>
+                </span>
+                Entrar com Google
+              </Button>
+
+              <Button
+                onClick={() => handleSocialLogin("facebook")}
+                className="flex-1 h-11"
+                variant="outline"
+              >
+                <span className="mr-2 flex items-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 12.073C22 6.486 17.523 2 11.936 2S2 6.486 2 12.073C2 17.104 5.656 21.128 10.438 21.93v-6.99H7.898v-2.87h2.54V9.845c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.242 0-1.63.773-1.63 1.562v1.88h2.773l-.443 2.87h-2.33v6.99C18.344 21.128 22 17.104 22 12.073z" fill="#1877F2"/>
+                  </svg>
+                </span>
+                Entrar com Facebook
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-center text-xs text-muted-foreground flex-1">
+              Configure seu endpoint de autenticação no backend
+            </p>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/register")}
+              className="text-xs"
+            >
+              Criar conta
+            </Button>
+          </div>
         </div>
       </div>
     </div>
