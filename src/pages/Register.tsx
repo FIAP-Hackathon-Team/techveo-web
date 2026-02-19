@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Video, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { authRegisterRequest } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,12 +28,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const base = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${base}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, username, email, password }),
-      });
+      const res = await authRegisterRequest({ fullName, username, email, password });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

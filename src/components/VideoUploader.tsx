@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { Upload, FileVideo, X, Send, Loader2, CheckCircle, Settings, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { processVideoRequest } from "@/services/api";
 import JSZip from "jszip";
 import {
   Dialog,
@@ -42,7 +43,6 @@ interface UploadedVideo {
 }
 
 export function VideoUploader() {
-  const { token } = useAuth();
   const [videos, setVideos] = useState<UploadedVideo[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -262,14 +262,8 @@ export function VideoUploader() {
         formData.append('height', video.options.height.toString());
         formData.append('prompt', video.options.prompt || '');
 
-        // Enviar para o servidor
-        const response = await fetch('/api/process-video', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        });
+        // Enviar para o servidor via service centralizado
+        const response = await processVideoRequest(formData);
 
         if (response.ok) {
           setVideos((prev) =>
@@ -290,7 +284,7 @@ export function VideoUploader() {
     } finally {
       setIsProcessing(false);
     }
-  }, [videos, token, validateVideoConfig]);
+  }, [videos, validateVideoConfig]);
 
   const readyCount = videos.filter((v) => v.status === "ready").length;
   const configuredCount = videos.filter((v) => v.status === "ready" && validateVideoConfig(v)).length;

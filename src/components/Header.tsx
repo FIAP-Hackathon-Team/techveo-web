@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-border">
@@ -21,12 +21,12 @@ export function Header() {
           {user && (
             <>
               <span className="text-sm text-muted-foreground hidden sm:block">
-                {user.email}
+                {user.username}
               </span>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={logout}
+                onClick={signOut}
                 className="rounded-full w-10 h-10 hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
                 <LogOut className="h-5 w-5" />

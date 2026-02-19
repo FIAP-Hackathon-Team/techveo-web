@@ -1,7 +1,11 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { authSignInRequest } from "@/services/api";
 
 interface User {
   id: string;
+  name: string;
+  username: string;
+  role: string;
   email: string;
 }
 
@@ -9,8 +13,8 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,31 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // TODO: Replace this URL with your actual backend endpoint
-    const API_URL = import.meta.env.VITE_AUTH_API_URL || "";
-    
-    // If no API URL is configured, use demo mode
-    if (!API_URL) {
-      const mockUser = { id: "1", email };
-      const mockToken = "demo_jwt_token";
-      
-      setToken(mockToken);
-      setUser(mockUser);
-      localStorage.setItem("auth_token", mockToken);
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
-      
-      return { success: true };
-    }
-
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await authSignInRequest(email, password);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -68,9 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       
-      setToken(data.token);
+      setToken(data.accessToken);
       setUser(data.user);
-      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("auth_token", data.accessToken);
       localStorage.setItem("auth_user", JSON.stringify(data.user));
       
       return { success: true };
@@ -82,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const signOut = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("auth_token");
@@ -90,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

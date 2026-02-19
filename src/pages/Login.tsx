@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Video, Loader2, Mail, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { socialLoginUrl } from "@/services/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,7 +21,7 @@ export default function Login() {
     setError("");
     setIsLoading(true);
 
-    const result = await login(email, password);
+    const result = await signIn(email, password);
     
     if (result.success) {
       navigate("/");
@@ -32,8 +33,7 @@ export default function Login() {
   };
 
   const handleSocialLogin = (provider: "google" | "facebook") => {
-    const base = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${base}/auth/${provider}`;
+    window.location.href = socialLoginUrl(provider);
   };
 
   return (
