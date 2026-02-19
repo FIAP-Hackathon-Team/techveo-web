@@ -34,3 +34,23 @@ export function processVideoRequest(formData: FormData) {
     body: formData,
   });
 }
+
+export async function authConfirmRequest(payload: { email?: string; userId?: string; pin: string }) {
+  return fetch('api/auth/v1/confirm', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function authResendConfirmRequest(payload: { email?: string; userId?: string }) {
+  return fetch('api/auth/v1/resend-confirm', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}

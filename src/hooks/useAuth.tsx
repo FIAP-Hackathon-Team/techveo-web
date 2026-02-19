@@ -7,6 +7,7 @@ interface User {
   username: string;
   role: string;
   email: string;
+  confirmed: boolean;
 }
 
 interface AuthContextType {
