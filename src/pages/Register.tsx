@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Register() {
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +31,7 @@ export default function Register() {
       const res = await fetch(`${base}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, email, password }),
+        body: JSON.stringify({ fullName, username, email, password }),
       });
 
       if (!res.ok) {
@@ -43,7 +43,7 @@ export default function Register() {
 
       // sucesso: redireciona para login
       navigate("/login");
-    } catch (err: any) {
+    } catch (err) {
       setError(err?.message || "Erro de rede");
     } finally {
       setIsLoading(false);
@@ -71,8 +71,8 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium">Nome</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="h-11 bg-card border-border" />
+                <Label htmlFor="fullName" className="text-sm font-medium">Nome completo</Label>
+                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="h-11 bg-card border-border" />
               </div>
 
               <div className="space-y-2">
