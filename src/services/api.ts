@@ -55,7 +55,7 @@ export async function getVideoStatus(videoId: string) {
 }
 
 export async function authConfirmRequest(payload: { email?: string; userId?: string; pin: string }) {
-  return fetch('/api/auth/v1/confirm', {
+  return fetch(`${BASE_URL}/api/auth/v1/confirm`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
