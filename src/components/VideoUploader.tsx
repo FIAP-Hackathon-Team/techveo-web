@@ -1,9 +1,7 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, FileVideo, X, Send, Loader2, CheckCircle, Settings, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { processVideoRequest } from "@/services/api";
-import JSZip from "jszip";
+import { processVideoRequest, getVideoStatus } from "@/services/api";
 import {
   Dialog,
   DialogContent,
@@ -35,8 +33,9 @@ interface VideoSnapshotOptions {
 interface UploadedVideo {
   file: File;
   id: string;
+  jobId?: string;
   progress: number;
-  status: "uploading" | "ready" | "error" | "processing" | "processed";
+  status: "uploading" | "ready" | "queued" | "processing" | "error" | "processed";
   options: VideoSnapshotOptions;
   duration?: number;
   durationLoaded: boolean;
@@ -230,6 +229,49 @@ export function VideoUploader() {
     }
     return false;
   }, []);
+  
+  const startPollingStatus = useCallback((jobId: string, localId: string) => {
+    // don't start if already polling for this job
+    if (pollingRefs.current[jobId]) return;
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const res = await getVideoStatus(jobId);
+        const serverStatus = (res?.data?.status || res?.data?.state || '') as string;
+
+        // Normalize to known labels
+        const normalized = serverStatus ? serverStatus.toLowerCase() : '';
+
+        setVideos((prev) =>
+          prev.map((v) => {
+            if (v.id !== localId) return v;
+
+            if (normalized.includes('queued')) return { ...v, status: 'queued' };
+            if (normalized.includes('processing')) return { ...v, status: 'processing' };
+            if (normalized.includes('completed') || normalized.includes('done') || normalized.includes('finished')) {
+              return { ...v, status: 'processed' };
+            }
+            if (normalized.includes('failed') || normalized.includes('error')) return { ...v, status: 'error' };
+
+            return v;
+          })
+        );
+
+        // Stop polling when finished or failed
+        if (normalized.includes('completed') || normalized.includes('done') || normalized.includes('finished') || normalized.includes('failed') || normalized.includes('error')) {
+          const id = pollingRefs.current[jobId];
+          if (id) {
+            clearInterval(id);
+            delete pollingRefs.current[jobId];
+          }
+        }
+      } catch (e) {
+        console.error('Polling status failed for', jobId, e);
+      }
+    }, 2000);
+
+    pollingRefs.current[jobId] = intervalId;
+  }, []);
 
   const processVideos = useCallback(async () => {
     const readyVideos = videos.filter((v) => v.status === "ready");
@@ -246,10 +288,10 @@ export function VideoUploader() {
     
     try {
       for (const video of readyVideos) {
-        // Marcar como processando
+        // Marcar como na fila (será controlado pelo backend)
         setVideos((prev) =>
           prev.map((v) =>
-            v.id === video.id ? { ...v, status: "processing" } : v
+            v.id === video.id ? { ...v, status: "queued" } : v
           )
         );
 
@@ -266,11 +308,34 @@ export function VideoUploader() {
         const response = await processVideoRequest(formData);
 
         if (response.ok) {
+          // Try to extract a job id returned by the backend (id, jobId or videoId)
+          let json: any = null;
+          try {
+            json = await response.json();
+          } catch (e) {
+            json = null;
+          }
+
+          const returnedJobId = json?.jobId || json?.id || json?.videoId || undefined;
+
+          // Update video with job id and mark as queued or processing
           setVideos((prev) =>
             prev.map((v) =>
-              v.id === video.id ? { ...v, status: "processed" } : v
+              v.id === video.id ? { ...v, jobId: returnedJobId, status: returnedJobId ? 'queued' : 'processing' } : v
             )
           );
+
+          if (returnedJobId) {
+            // start polling
+            startPollingStatus(returnedJobId, video.id);
+          } else {
+            // If no job id returned, optimistically mark as processing and then processed
+            setVideos((prev) =>
+              prev.map((v) =>
+                v.id === video.id ? { ...v, status: 'processing' } : v
+              )
+            );
+          }
         } else {
           setVideos((prev) =>
             prev.map((v) =>
@@ -284,7 +349,18 @@ export function VideoUploader() {
     } finally {
       setIsProcessing(false);
     }
-  }, [videos, validateVideoConfig]);
+  }, [videos, validateVideoConfig, startPollingStatus]);
+
+  // Keep references to active polling intervals so we can clear them on unmount
+  const pollingRefs = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    return () => {
+      // clear intervals on unmount
+      Object.values(pollingRefs.current).forEach((id) => clearInterval(id));
+      pollingRefs.current = {};
+    };
+  }, []);
 
   const readyCount = videos.filter((v) => v.status === "ready").length;
   const configuredCount = videos.filter((v) => v.status === "ready" && validateVideoConfig(v)).length;
@@ -402,6 +478,13 @@ export function VideoUploader() {
                   
                   {video.status === "ready" && (
                     <CheckCircle className="w-5 h-5 text-success" />
+                  )}
+
+                  {video.status === "queued" && (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      <span className="text-xs text-muted-foreground">Na fila...</span>
+                    </div>
                   )}
                   
                   {video.status === "processing" && (
