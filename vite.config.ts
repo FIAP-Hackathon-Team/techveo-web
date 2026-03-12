@@ -9,7 +9,6 @@ export default defineConfig(({ mode }) => {
   const MANAGEMENT_API_BASE = "http://localhost:45001";
 
   return {
-    base: "/web",
     server: {
       host: "::",
       port: 8080,
