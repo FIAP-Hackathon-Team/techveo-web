@@ -20,7 +20,8 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   if (isLoading) return null;
   if (user) {
     if (!user.confirmed) {
-      return <Navigate to="/confirm-email" replace state={{ email: user.email, userId: user.id }} />;
+      // Disabled for now, as the email confirmation flow is not fully implemented
+      // return <Navigate to="/confirm-email" replace state={{ email: user.email, userId: user.id }} />;
     }
     return <Navigate to="/" replace />;
   }
