@@ -20,7 +20,7 @@ export async function authRegisterRequest(payload: Record<string, any>) {
 }
 
 export function socialLoginUrl(provider: 'google' | 'facebook') {
-  return `/api/auth/v1/${provider}`;
+  return `${BASE_URL}/api/auth/v1/${provider}`;
 }
 
 export function processVideoRequest(formData: FormData) {
