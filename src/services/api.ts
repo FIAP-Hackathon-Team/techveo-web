@@ -28,7 +28,7 @@ export function processVideoRequest(formData: FormData) {
   const token = localStorage.getItem("auth_token");
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  return fetch(`/api/management/v1/managements`, {
+  return fetch(`${BASE_URL}/api/management/v1/managements`, {
     method: 'POST',
     headers,
     body: formData,
