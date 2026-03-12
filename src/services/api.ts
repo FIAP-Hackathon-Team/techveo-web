@@ -1,6 +1,6 @@
 
 export async function authSignInRequest(username: string, password: string) {
-  return fetch('/api/auth/v1/signin', {
+  return fetch(`${BASE_URL}/api/auth/v1/signin`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
