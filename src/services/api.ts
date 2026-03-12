@@ -1,3 +1,4 @@
+const BASE_URL = "https://sbbr2xxjld.execute-api.us-east-1.amazonaws.com";
 
 export async function authSignInRequest(username: string, password: string) {
   return fetch(`${BASE_URL}/api/auth/v1/signin`, {
@@ -45,7 +46,6 @@ export async function getVideoStatus(videoId: string) {
     headers,
   });
 
-  // Try to parse JSON when possible; return the raw response if parsing fails
   try {
     const data = await res.json();
     return { ok: res.ok, status: res.status, data };
