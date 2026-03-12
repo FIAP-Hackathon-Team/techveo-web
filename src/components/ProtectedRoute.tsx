@@ -21,5 +21,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
+  if (user && !user.confirmed) {
+    return <Navigate to="/confirm-email" replace state={{ email: user.email, userId: user.id }} />;
+  }
+
   return <>{children}</>;
 }

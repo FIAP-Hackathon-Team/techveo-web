@@ -37,6 +37,18 @@ export default function Register() {
         return;
       }
 
+      // parse response body to detect unconfirmed users
+      const data = await res.json().catch(() => ({}));
+      const confirmed = data.confirmed ?? data.user?.confirmed;
+
+      if (confirmed === false) {
+        const userEmail = data.email || data.user?.email || email;
+        const userId = data.id || data.user?.id;
+        navigate("/confirm-email", { state: { email: userEmail, userId } });
+        setIsLoading(false);
+        return;
+      }
+
       // sucesso: redireciona para login
       navigate("/login");
     } catch (err) {
