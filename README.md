@@ -249,7 +249,12 @@ parâmetros operacionais do banco
 | **Autenticação** | JWT |
 | **Compartilhamento de contratos** |	Biblioteca shared |
 
-## 6. Diagrama de Arquitetura
+## 6. Diagrama de Componentes
+<img width="677" height="655" alt="image" src="https://github.com/user-attachments/assets/8b62a5fa-3c1a-4721-bc97-ce2b0a2f912f" />
+
+## 6.1 Diagrama de Sequência
+<img width="8192" height="4477" alt="Techveo Processing Pipeline-2026-03-12-034425" src="https://github.com/user-attachments/assets/d0971475-79a2-40f4-b9cc-67293e31ead7" />
+
 ## 7. Explicação do Fluxo Arquitetural
 
 A arquitetura possui dois fluxos complementares: o fluxo funcional da aplicação e o fluxo de infraestrutura e execução.
