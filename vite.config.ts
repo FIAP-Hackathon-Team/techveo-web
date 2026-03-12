@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       host: "::",
       port: 8080,
       proxy: {
-        "/api/auth": {
+        "/auth": {
           target: AUTH_API_BASE,
           changeOrigin: true,
           secure: false,
