@@ -40,7 +40,7 @@ export async function getVideoStatus(videoId: string) {
   const token = localStorage.getItem("auth_token");
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`/api/management/v1/managements/${videoId}/status`, {
+  const res = await fetch(`${BASE_URL}/api/management/v1/managements/${videoId}/status`, {
     method: 'GET',
     headers,
   });
