@@ -65,7 +65,7 @@ export async function authConfirmRequest(payload: { email?: string; userId?: str
 }
 
 export async function authResendConfirmRequest(payload: { email?: string; userId?: string }) {
-  return fetch('/api/auth/v1/resend-confirm', {
+  return fetch(`${BASE_URL}/api/auth/v1/resend-confirm`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
