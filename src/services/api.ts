@@ -10,7 +10,7 @@ export async function authSignInRequest(username: string, password: string) {
 }
 
 export async function authRegisterRequest(payload: Record<string, any>) {
-  return fetch('/api/auth/v1/register', {
+  return fetch(`${BASE_URL}/api/auth/v1/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
