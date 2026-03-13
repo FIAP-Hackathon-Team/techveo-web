@@ -408,7 +408,7 @@ Atualmente, o modelo de dados da aplicação está centralizado na entidade `Man
 - `FileName`: nome do arquivo;
 - `IsDeleted`: exclusão lógica.
 
-<img width="447" height="630" alt="Diagrama de Componentes" src="/docs/tipo-dados.ppg" />
+<img width="347" height="530" alt="Modelo Conceitual" src="/docs/tipo-dados.png" />
 
 ## 17. Vantagens da Arquitetura Proposta
 
