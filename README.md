@@ -250,10 +250,10 @@ parâmetros operacionais do banco
 | **Compartilhamento de contratos** |	Biblioteca shared |
 
 ## 6. Diagrama de Componentes
-  <img width="677" height="655" alt="Diagrama de Componentes" src="/docs/diagrama-de-componentes.jng" />
+  <img width="677" height="655" alt="Diagrama de Componentes" src="/docs/diagrama-de-componentes.jpg" />
 
 ## 6.1 Diagrama de Sequência
-  <img width="1200" alt="Diagrama de Sequência" src="/docs/diagrama-de-sequencia.jng" />
+  <img width="1200" alt="Diagrama de Sequência" src="/docs/diagrama-de-sequencia.jpg" />
 
 ## 7. Explicação do Fluxo Arquitetural
 
