@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
+import ConfirmEmail from "./pages/ConfirmEmail";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,13 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   
   if (isLoading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) {
+    if (!user.confirmed) {
+      // Disabled for now, as the email confirmation flow is not fully implemented
+      // return <Navigate to="/confirm-email" replace state={{ email: user.email, userId: user.id }} />;
+    }
+    return <Navigate to="/" replace />;
+  }
   
   return <>{children}</>;
 }
@@ -48,6 +55,7 @@ const App = () => (
                 }
               />
               <Route path="/register" element={<Register />} />
+              <Route path="/confirm-email" element={<ConfirmEmail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
