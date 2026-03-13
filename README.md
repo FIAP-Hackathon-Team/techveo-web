@@ -248,6 +248,7 @@ parâmetros operacionais do banco
 | **CI/CD** | GitHub Actions |
 | **Autenticação** | JWT |
 | **Compartilhamento de contratos** |	Biblioteca shared |
+| **Monitoramento** |	Jagger e Grafana |
 
 ## 6. Diagrama de Componentes
   <img width="677" height="655" alt="Diagrama de Componentes" src="/docs/diagrama-de-componentes.jpg" />
