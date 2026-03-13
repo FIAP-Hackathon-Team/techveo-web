@@ -250,10 +250,10 @@ parâmetros operacionais do banco
 | **Compartilhamento de contratos** |	Biblioteca shared |
 
 ## 6. Diagrama de Componentes
-<img width="677" height="655" alt="image" src="https://github.com/user-attachments/assets/8b62a5fa-3c1a-4721-bc97-ce2b0a2f912f" />
+<img width="677" height="655" alt="image" src= "/docs/diagrama-de-componentes.png" />
 
 ## 6.1 Diagrama de Sequência
-<img width="8192" height="4477" alt="Techveo Processing Pipeline-2026-03-12-034425" src="https://github.com/user-attachments/assets/d0971475-79a2-40f4-b9cc-67293e31ead7" />
+<img width="6192" height="3477" alt="Techveo Processing Pipeline-2026-03-12-034425" src="/docs/diagrama-de-sequencia.png" />
 
 ## 7. Explicação do Fluxo Arquitetural
 
